@@ -1,0 +1,139 @@
+#include &lt;windows.h&gt;
+#include &lt;vector&gt;
+#include &lt;stack&gt;
+#include &lt;string&gt;
+using namespace std;
+// ---------------- Node Structure ----------------
+struct NodePos {
+int x, y;
+string name;
+};
+// ---------------- Graph Class ----------------
+class Graph {
+int V;
+vector&lt;vector&lt;int&gt;&gt; adj;
+void topoUtil(int v, vector&lt;bool&gt;&amp; visited, stack&lt;int&gt;&amp; st) {
+visited[v] = true;
+for (int i = 0; i &lt; adj[v].size(); i++)
+if (!visited[adj[v][i]])
+topoUtil(adj[v][i], visited, st);
+st.push(v);
+}
+public:
+Graph(int v) {
+V = v;
+adj.resize(V);
+}
+void addEdge(int u, int v) {
+adj[u].push_back(v);
+}
+vector&lt;int&gt; topologicalSort() {
+stack&lt;int&gt; st;
+vector&lt;bool&gt; visited(V, false);
+vector&lt;int&gt; result;
+for (int i = 0; i &lt; V; i++)
+if (!visited[i])
+topoUtil(i, visited, st);
+while (!st.empty()) {
+result.push_back(st.top());
+st.pop();
+}
+return result;
+}
+};
+// ---------------- Global Data ----------------
+NodePos nodes[6] = {
+
+{100, 100, &quot;Buy Ingred.&quot;},
+{300, 150, &quot;Mix Ingred.&quot;},
+{500, 80, &quot;Heat Pan&quot;},
+{500, 150, &quot;Pour Batter&quot;},
+{500, 220, &quot;Cook Pan&quot;},
+{700, 220, &quot;Serve&quot;}
+};
+vector&lt;int&gt; topoOrder;
+// ---------------- Drawing Helpers ----------------
+void drawStep(HDC hdc, int x, int y, string text) {
+Ellipse(hdc, x-50, y-25, x+50, y+25);
+TextOutA(hdc, x-35, y-8, text.c_str(), text.length());
+}
+void drawArrow(HDC hdc, int x1, int y1, int x2, int y2) {
+MoveToEx(hdc, x1, y1, NULL);
+LineTo(hdc, x2, y2);
+Ellipse(hdc, x2-3, y2-3, x2+3, y2+3);
+}
+// ---------------- Window Procedure ----------------
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+switch (msg) {
+case WM_PAINT: {
+PAINTSTRUCT ps;
+HDC hdc = BeginPaint(hwnd, &amp;ps);
+RECT rect;
+GetClientRect(hwnd, &amp;rect);
+HBRUSH pink = CreateSolidBrush(RGB(255,182,193));
+FillRect(hdc, &amp;rect, pink);
+SetBkMode(hdc, TRANSPARENT);
+SetTextColor(hdc, RGB(0,0,0));
+// Title
+TextOutA(hdc, 230, 20,
+&quot;PANCAKE RECIPE - TOPOLOGICAL FLOW&quot;, 36);
+// Arrows (same layout)
+drawArrow(hdc, 150,100,250,150);
+drawArrow(hdc, 350,150,450,150);
+drawArrow(hdc, 500,105,500,125);
+drawArrow(hdc, 500,175,500,195);
+drawArrow(hdc, 550,220,650,220);
+// Nodes
+for (int i = 0; i &lt; 6; i++)
+drawStep(hdc, nodes[i].x, nodes[i].y, nodes[i].name);
+// Topological Order Text
+string res = &quot;Topological Order: &quot;;
+for (int i = 0; i &lt; topoOrder.size(); i++)
+res += to_string(topoOrder[i]) + &quot; &quot;;
+
+TextOutA(hdc, 50, 350, res.c_str(), res.length());
+DeleteObject(pink);
+EndPaint(hwnd, &amp;ps);
+break;
+}
+case WM_DESTROY:
+PostQuitMessage(0);
+break;
+default:
+return DefWindowProc(hwnd, msg, wp, lp);
+}
+return 0;
+}
+// ---------------- WinMain ----------------
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int) {
+// Graph logic (same as tumhara)
+Graph g(6);
+g.addEdge(0,1);
+g.addEdge(1,3);
+g.addEdge(2,3);
+g.addEdge(3,4);
+g.addEdge(4,5);
+topoOrder = g.topologicalSort();
+// Window class
+WNDCLASS wc = {};
+wc.lpfnWndProc = WndProc;
+wc.hInstance = hInst;
+wc.lpszClassName = &quot;TopoWindow&quot;;
+RegisterClass(&amp;wc);
+// Create window
+HWND hwnd = CreateWindow(
+&quot;TopoWindow&quot;,
+&quot;Topological Sort Visualization&quot;,
+WS_OVERLAPPEDWINDOW,
+120, 80, 900, 500,
+NULL, NULL, hInst, NULL
+);
+ShowWindow(hwnd, SW_SHOW);
+// Message loop
+MSG msg;
+while (GetMessage(&amp;msg, NULL, 0, 0)) {
+TranslateMessage(&amp;msg);
+DispatchMessage(&amp;msg);
+}
+return 0;
+}
