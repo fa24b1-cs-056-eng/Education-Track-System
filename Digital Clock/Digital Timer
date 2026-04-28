@@ -1,0 +1,165 @@
+.model small
+.stack 100h
+.data
+    msg_input   db 'ENTER CHOICE (P=Pak, C=Canada, D=Dubai, S=Saudi, Q=Quit): $'
+    msg_time    db 'CURRENT TIME: 00:00:00$', 
+    msg_country db 'COUNTRY: $', 
+    name_pak    db 'PAKISTAN$', 
+    name_can    db 'CANADA  $', 
+    name_dxb    db 'DUBAI   $', 
+    name_sau    db 'SAUDI   $',
+    msg_help    db 'Press any key to change country...$',
+    
+    time_bias   dw 0
+    country_ptr dw ?    ; Country name ka address store karne ke liye
+
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+
+get_user_input:
+    mov ax, 03h         ; Screen Clear
+    int 10h
+
+    mov ah, 02h
+    mov dh, 2           ; Row 2
+    mov dl, 0
+    int 10h
+
+    mov dx, offset msg_input
+    mov ah, 09h
+    int 21h
+
+    mov ah, 01h         ; Input Wait
+    int 21h
+    
+    ; Logic for Country and Bias
+    cmp al, 'p'
+    je set_p
+    cmp al, 'P'
+    je set_p
+    cmp al, 'c'
+    je set_c
+    cmp al, 'C'
+    je set_c
+    cmp al, 'd'
+    je set_d
+    cmp al, 'D'
+    je set_d
+    cmp al, 's'
+    je set_s
+    cmp al, 'S'
+    je set_s
+    cmp al, 'q'
+    je exit_prog
+    cmp al, 'Q'
+    je exit_prog
+    jmp get_user_input
+
+set_p: mov time_bias, 0
+       mov country_ptr, offset name_pak
+       jmp start_clock
+set_c: mov time_bias, -10
+       mov country_ptr, offset name_can
+       jmp start_clock
+set_d: mov time_bias, -1
+       mov country_ptr, offset name_dxb
+       jmp start_clock
+set_s: mov time_bias, -2
+       mov country_ptr, offset name_sau
+       jmp start_clock
+
+start_clock:
+    mov ax, 03h         ; Screen Clear once
+    int 10h
+
+    display_loop:
+        ; 1. Show Help Guide
+        mov ah, 02h
+        mov dh, 0
+        mov dl, 0
+        int 10h
+        mov dx, offset msg_help
+        mov ah, 09h
+        int 21h
+
+        ; 2. Show Country Name (Row 4)
+        mov ah, 02h
+        mov dh, 4
+        mov dl, 0
+        int 10h
+        mov dx, offset msg_country
+        mov ah, 09h
+        int 21h
+        mov dx, country_ptr    ; Dynamic country name
+        mov ah, 09h
+        int 21h
+
+        ; 3. Get System Time
+        mov ah, 2ch
+        int 21h
+
+        ; 4. Apply Bias
+        mov al, ch
+        xor ah, ah
+        add ax, time_bias
+        
+        cmp ax, 0
+        jge m1
+        add ax, 24
+        jmp fmt
+    m1: cmp ax, 24
+        jl fmt
+        sub ax, 24
+
+    fmt:
+        lea bx, msg_time + 14
+        call to_ascii       ; Hours
+        mov al, cl
+        lea bx, msg_time + 17
+        call to_ascii       ; Minutes
+        mov al, dh
+        lea bx, msg_time + 20
+        call to_ascii       ; Seconds
+
+        ; 5. Show Time (Row 6)
+        mov ah, 02h
+        mov dh, 6
+        mov dl, 0
+        int 10h
+        mov dx, offset msg_time
+        mov ah, 09h
+        int 21h
+
+        ; Check for key to restart
+        mov ah, 01h
+        int 16h
+        jnz clear_and_restart
+
+        jmp display_loop
+
+clear_and_restart:
+    mov ah, 00h
+    int 16h
+    jmp get_user_input
+
+exit_prog:
+    mov ax, 4c00h
+    int 21h
+main endp
+
+to_ascii proc
+    push dx
+    xor ah, ah
+    mov dl, 10
+    div dl
+    add al, 30h
+    add ah, 30h
+    mov [bx], al
+    mov [bx+1], ah
+    pop dx
+    ret
+to_ascii endp
+
+end main
