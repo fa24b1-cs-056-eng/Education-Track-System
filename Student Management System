@@ -1,0 +1,142 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Student structure definition
+struct Student {
+    int roll_no;
+    char name[50];
+    char course[50];
+    float fees;
+};
+
+// Function prototypes
+void addStudent();
+void viewStudents();
+void searchStudent();
+void deleteStudent();
+
+int main() {
+    int choice;
+
+    while (1) {
+        printf("\n--- STUDENT MANAGEMENT SYSTEM ---");
+        printf("\n1. Add Student");
+        printf("\n2. View All Students");
+        printf("\n3. Search Student (by Roll No)");
+        printf("\n4. Delete Student");
+        printf("\n5. Exit");
+        printf("\nSelect an option: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1: addStudent(); break;
+            case 2: viewStudents(); break;
+            case 3: searchStudent(); break;
+            case 4: deleteStudent(); break;
+            case 5: exit(0);
+            default: printf("\nInvalid choice! Try again.\n");
+        }
+    }
+    return 0;
+}
+
+void addStudent() {
+    FILE *fp = fopen("students.dat", "ab");
+    struct Student s;
+
+    if (fp == NULL) {
+        printf("Error opening file!");
+        return;
+    }
+
+    printf("\nEnter Roll No: ");
+    scanf("%d", &s.roll_no);
+    printf("Enter Name: ");
+    scanf(" %[^\n]s", s.name);
+    printf("Enter Course: ");
+    scanf(" %[^\n]s", s.course);
+    printf("Enter Fees: ");
+    scanf("%f", &s.fees);
+
+    fwrite(&s, sizeof(struct Student), 1, fp);
+    fclose(fp);
+    printf("\nStudent record added successfully!\n");
+}
+
+void viewStudents() {
+    FILE *fp = fopen("students.dat", "rb");
+    struct Student s;
+
+    if (fp == NULL) {
+        printf("\nNo records found!\n");
+        return;
+    }
+
+    printf("\n--- Student List ---\n");
+    printf("%-10s %-20s %-20s %-10s\n", "Roll No", "Name", "Course", "Fees");
+    
+    while (fread(&s, sizeof(struct Student), 1, fp)) {
+        printf("%-10d %-20s %-20s %-10.2f\n", s.roll_no, s.name, s.course, s.fees);
+    }
+
+    fclose(fp);
+}
+
+void searchStudent() {
+    FILE *fp = fopen("students.dat", "rb");
+    struct Student s;
+    int roll, found = 0;
+
+    if (fp == NULL) {
+        printf("\nNo records found!\n");
+        return;
+    }
+
+    printf("\nEnter Roll No to search: ");
+    scanf("%d", &roll);
+
+    while (fread(&s, sizeof(struct Student), 1, fp)) {
+        if (s.roll_no == roll) {
+            printf("\nRecord Found:");
+            printf("\nName: %s\nCourse: %s\nFees: %.2f\n", s.name, s.course, s.fees);
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) printf("\nStudent not found!\n");
+    fclose(fp);
+}
+
+void deleteStudent() {
+    FILE *fp = fopen("students.dat", "rb");
+    FILE *temp = fopen("temp.dat", "wb");
+    struct Student s;
+    int roll, found = 0;
+
+    if (fp == NULL) {
+        printf("\nNo records found!\n");
+        return;
+    }
+
+    printf("\nEnter Roll No to delete: ");
+    scanf("%d", &roll);
+
+    while (fread(&s, sizeof(struct Student), 1, fp)) {
+        if (s.roll_no == roll) {
+            found = 1;
+        } else {
+            fwrite(&s, sizeof(struct Student), 1, temp);
+        }
+    }
+
+    fclose(fp);
+    fclose(temp);
+
+    remove("students.dat");
+    rename("temp.dat", "students.dat");
+
+    if (found) printf("\nRecord deleted successfully!\n");
+    else printf("\nRecord not found!\n");
+}
