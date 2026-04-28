@@ -1,0 +1,158 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct Game {
+    char board[3][3];
+    char currentPlayer;
+};
+
+void initializeBoard(struct Game *game) {
+    for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < 3; col++) {
+            game->board[row][col] = ' ';
+        }
+    }
+}
+
+void boardDisplay(struct Game game) {
+    printf("\nCurrent Game Board:\n");
+    for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < 3; col++) {
+            printf("%c", game.board[row][col]);
+            if (col < 2) {
+                printf(" | ");
+            }
+        }
+        printf("\n");
+        if (row < 2) {
+            printf("---------\n");
+        }
+    }
+    printf("\n");
+}
+
+void makeMove(struct Game *game, int move) {
+    int row = (move - 1) / 3;
+    int col = (move - 1) % 3;
+    if (game->board[row][col] == ' ') {
+        game->board[row][col] = game->currentPlayer;
+    } else {
+        printf("Invalid move! The cell is already taken.\n");
+    }
+}
+
+int checkingWinner(struct Game game) {
+    for (int i = 0; i < 3; i++) {
+        if (game.board[i][0] == game.board[i][1] && game.board[i][1] == game.board[i][2] && game.board[i][0] != ' ') {
+            return 1;
+        }
+        if (game.board[0][i] == game.board[1][i] && game.board[1][i] == game.board[2][i] && game.board[0][i] != ' ') {
+            return 1;
+        }
+    }
+    if (game.board[0][0] == game.board[1][1] && game.board[1][1] == game.board[2][2] && game.board[0][0] != ' ') {
+        return 1;
+    }
+    if (game.board[0][2] == game.board[1][1] && game.board[1][1] == game.board[2][0] && game.board[0][2] != ' ') {
+        return 1;
+    }
+    return 0;
+}
+
+int boardFull(struct Game game) {
+    for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < 3; col++) {
+            if (game.board[row][col] == ' ') {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+void switchPlayer(struct Game *game) {
+    if (game->currentPlayer == 'X') {
+        game->currentPlayer = 'O';
+    } else {
+        game->currentPlayer = 'X';
+    }
+}
+
+void saveResult(const char *player1, const char *player2, char winner) {
+    FILE *file = fopen("game_results.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file to save results.\n");
+        return;
+    }
+
+    if (winner == 'D') {
+        fprintf(file, "Player 1: %s, Player 2: %s, Result: Draw\n", player1, player2);
+    } else {
+        fprintf(file, "Player 1: %s, Player 2: %s, Winner: %c\n", player1, player2, winner);
+    }
+    fclose(file);
+}
+
+void gameplay(struct Game *game, const char *player1, const char *player2) {
+    int move;
+    int winner = 0;
+
+    while (1) {
+        boardDisplay(*game);
+        printf("Player %c, enter your move (1-9): ", game->currentPlayer);
+        scanf("%d", &move);
+
+        if (move < 1 || move > 9) {
+            printf("Invalid move! Choose a number between 1 and 9.\n");
+            continue;
+        }
+
+        makeMove(game, move);
+        winner = checkingWinner(*game);
+
+        if (winner) {
+            boardDisplay(*game);
+            printf("Player %c wins!\n", game->currentPlayer);
+            saveResult(player1, player2, game->currentPlayer);
+            break;
+        }
+
+        if (boardFull(*game)) {
+            boardDisplay(*game);
+            printf("It's a draw!\n");
+            saveResult(player1, player2, 'D');
+            break;
+        }
+
+        switchPlayer(game);
+    }
+}
+
+int main() {
+    struct Game game;
+    game.currentPlayer = 'X';
+    char player1[50], player2[50];
+    char playAgain;
+
+    do {
+        printf("Enter name of Player 1: ");
+        fgets(player1, sizeof(player1), stdin);
+        player1[strcspn(player1, "\n")] = '\0';
+
+        printf("Enter name of Player 2: ");
+        fgets(player2, sizeof(player2), stdin);
+        player2[strcspn(player2, "\n")] = '\0';
+
+        initializeBoard(&game);
+        gameplay(&game, player1, player2);
+
+        printf("\nDo you want to play again? (y/n): ");
+        scanf(" %c", &playAgain);
+        getchar();
+
+    } while (playAgain == 'y' || playAgain == 'Y');
+
+    printf("Thanks for playing!\n");
+    return 0;
+}
